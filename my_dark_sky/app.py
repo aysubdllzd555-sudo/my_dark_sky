@@ -187,7 +187,15 @@ def fetch_forecast(lat, lon):
             "icon":icon,
         })
 
-        return {"current": current, "hourly": hourly, "daily": daily}
+    result = {
+        "location": {"lat": lat, "lon": lon},
+        "current":current,
+        "hourly":hourly,
+        "daily": daily,
+    }
+    set_cached(key, result)
+    result["cached"] = False
+    return result
 
 
 
