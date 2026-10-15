@@ -175,8 +175,20 @@ def fetch_forecast(lat, lon):
             "wind_max": d["wind_speed_10m_max"][i],
             "uv": d["uv_index_max"][i],
         })
+    h=data["hourly"]
+    hourly=[]
+    for i in range(48):
+        text,icon=describe(h["weather_code"][i])
+        hourly.append({
+            "time":h["time"][i],
+            "temp":h["temperature_2m"][i],
+            "rain_chance":h["precipitation_probability"][i],
+            "summary":text,
+            "icon":icon,
+        })
 
-    return {"current": current, "daily": daily}
+        return {"current": current, "hourly": hourly, "daily": daily}
+
 
 
 
