@@ -4,11 +4,12 @@ import json
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import requests
+
 load_dotenv()
 
 app = Flask(__name__)
 
-CACHE_TTL_SECONDS = 300  # 5 dəqiqə
+CACHE_TTL_SECONDS = 300  
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///cache.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -47,6 +48,7 @@ def set_cached(key, data):
         db.session.add(WeatherCache(cache_key=key, data=payload))
 
     db.session.commit()
+
 
 class WeatherServiceError(Exception):
     def __init__(self, message, status=502):
@@ -175,22 +177,23 @@ def fetch_forecast(lat, lon):
             "wind_max": d["wind_speed_10m_max"][i],
             "uv": d["uv_index_max"][i],
         })
-    h=data["hourly"]
-    hourly=[]
+        
+    h = data["hourly"]
+    hourly = []
     for i in range(48):
-        text,icon=describe(h["weather_code"][i])
+        text, icon = describe(h["weather_code"][i])
         hourly.append({
-            "time":h["time"][i],
-            "temp":h["temperature_2m"][i],
-            "rain_chance":h["precipitation_probability"][i],
-            "summary":text,
-            "icon":icon,
+            "time": h["time"][i],
+            "temp": h["temperature_2m"][i],
+            "rain_chance": h["precipitation_probability"][i],
+            "summary": text,
+            "icon": icon,
         })
 
     result = {
         "location": {"lat": lat, "lon": lon},
-        "current":current,
-        "hourly":hourly,
+        "current": current,
+        "hourly": hourly,
         "daily": daily,
     }
     set_cached(key, result)
@@ -198,6 +201,116 @@ def fetch_forecast(lat, lon):
     return result
 
 
+def fetch_date(lat, lon, date_str):
+    try:
+        day = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        raise WeatherServiceError("Tarix formati YYYY-MM-DD olmalidir", 400)
+
+    today = datetime.utcnow().date()
+    diff = (day - today).days
+
+    if diff < -365:
+        raise WeatherServiceError("Kecmisde maksimum 1 il geri getmek olar", 400)
+    if diff > 14:
+        raise WeatherServiceError("Gelecekde maksimum 14 gun ireli getmek olar", 400)
+
+    key = f"date:{round(lat, 2)}:{round(lon, 2)}:{date_str}"
+    cached = get_cached(key)
+    if cached is not None:
+        cached["cached"] = True
+        return cached
+
+    if diff < 0:
+        url = "https://archive-api.open-meteo.com/v1/archive"
+        kind = "historical"
+    else:
+        url = "https://api.open-meteo.com/v1/forecast"
+        kind = "forecast"
+
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "start_date": date_str,
+        "end_date": date_str,
+        "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max",
+        "timezone": "auto",
+    }
+    data = http_get(url, params)
+
+    d = data["daily"]
+    text, icon = describe(d["weather_code"][0])
+    result = {
+        "location": {"lat": lat, "lon": lon},
+        "type": kind,
+        "date": date_str,
+        "min": d["temperature_2m_min"][0],
+        "max": d["temperature_2m_max"][0],
+        "summary": text,
+        "icon": icon,
+        "precipitation": d["precipitation_sum"][0],
+        "wind_max": d["wind_speed_10m_max"][0],
+    }
+    set_cached(key, result)
+    result["cached"] = False
+    return result
+
+
+def parse_coords():
+    lat_raw = request.args.get("lat")
+    lon_raw = request.args.get("lon")
+
+    if lat_raw is None or lon_raw is None:
+        raise WeatherServiceError("lat ve lon parametrleri teleb olunur", 400)
+
+    try:
+        lat = float(lat_raw)
+        lon = float(lon_raw)
+    except ValueError:
+        raise WeatherServiceError("lat ve lon reqem olmalidir", 400)
+
+    if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+        raise WeatherServiceError("Koordinatlar araliqdan kenardadir", 400)
+
+    return lat, lon
+
+
+@app.errorhandler(WeatherServiceError)
+def handle_service_error(e):
+    return jsonify({"error": e.message}), e.status
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+@app.route("/api/health")
+def health():
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/search")
+def api_search():
+    q = request.args.get("q", "").strip()
+    if len(q) < 2:
+        raise WeatherServiceError("Axtaris ucun en azi 2 herf yazin", 400)
+    return jsonify(geocode(q))
+
+
+@app.route("/api/weather")
+def api_weather():
+    lat, lon = parse_coords()
+    return jsonify(fetch_forecast(lat, lon))
+
+
+@app.route("/api/weather/date")
+def api_weather_date():
+    lat, lon = parse_coords()
+    date_str = request.args.get("date")
+    if not date_str:
+        raise WeatherServiceError("date parametri teleb olunur", 400)
+    return jsonify(fetch_date(lat, lon, date_str))
 
 
 with app.app_context():
