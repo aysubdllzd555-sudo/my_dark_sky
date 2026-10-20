@@ -4,4 +4,4 @@ if [ ! -d "venv" ]; then
 fi
 source venv/bin/activate
 pip install --upgrade pip
-pip install flask flask-sqlalchemy requests python-dotenv gunicorn
+pip install -r requirements.txt
