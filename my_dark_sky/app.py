@@ -1,12 +1,14 @@
 from flask import Flask, jsonify, request, render_template
 from flask_sqlalchemy import SQLAlchemy
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from dotenv import load_dotenv
 import requests
+
 load_dotenv()
 
-app = Flask(__name__)
+
+app = Flask(__name__, static_folder="templates", static_url_path="/assets")
 
 CACHE_TTL_SECONDS = 300  
 
@@ -48,6 +50,8 @@ def set_cached(key, data):
 
     db.session.commit()
 
+
+
 class WeatherServiceError(Exception):
     def __init__(self, message, status=502):
         super().__init__(message)
@@ -68,6 +72,7 @@ def http_get(url, params):
         raise WeatherServiceError("Hava xidmetinden xeta", 502)
     except requests.RequestException:
         raise WeatherServiceError("Sebeke xetasi", 502)
+
 
 
 WEATHER_CODES = {
@@ -147,9 +152,11 @@ def fetch_forecast(lat, lon):
     }
     data = http_get("https://api.open-meteo.com/v1/forecast", params)
 
+    
     c = data["current"]
     text, icon = describe(c["weather_code"])
     current = {
+        "time": c["time"],
         "temp": c["temperature_2m"],
         "feels_like": c["apparent_temperature"],
         "humidity": c["relative_humidity_2m"],
@@ -161,6 +168,7 @@ def fetch_forecast(lat, lon):
         "icon": icon,
     }
 
+    
     d = data["daily"]
     daily = []
     for i in range(len(d["time"])):
@@ -175,22 +183,24 @@ def fetch_forecast(lat, lon):
             "wind_max": d["wind_speed_10m_max"][i],
             "uv": d["uv_index_max"][i],
         })
-    h=data["hourly"]
-    hourly=[]
+
+    
+    h = data["hourly"]
+    hourly = []
     for i in range(48):
-        text,icon=describe(h["weather_code"][i])
+        text, icon = describe(h["weather_code"][i])
         hourly.append({
-            "time":h["time"][i],
-            "temp":h["temperature_2m"][i],
-            "rain_chance":h["precipitation_probability"][i],
-            "summary":text,
-            "icon":icon,
+            "time": h["time"][i],
+            "temp": h["temperature_2m"][i],
+            "rain_chance": h["precipitation_probability"][i],
+            "summary": text,
+            "icon": icon,
         })
 
     result = {
         "location": {"lat": lat, "lon": lon},
-        "current":current,
-        "hourly":hourly,
+        "current": current,
+        "hourly": hourly,
         "daily": daily,
     }
     set_cached(key, result)
@@ -198,7 +208,7 @@ def fetch_forecast(lat, lon):
     return result
 
 
-    def fetch_date(lat, lon, date_str):
+def fetch_date(lat, lon, date_str):
     try:
         day = datetime.strptime(date_str, "%Y-%m-%d").date()
     except ValueError:
@@ -310,7 +320,9 @@ def api_weather_date():
     return jsonify(fetch_date(lat, lon, date_str))
 
 
-
-
 with app.app_context():
     db.create_all()
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
