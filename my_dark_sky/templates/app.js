@@ -4,7 +4,7 @@ function $(id) {
   
   
   function showMessage(text, isError) {
-    const box = $("message"); 
+    const box = $("message");
     box.textContent = text;
     box.className = "mt-6 rounded-lg px-4 py-3 " +
       (isError ? "bg-red-50 text-red-700" : "bg-sky-50 text-sky-700");
@@ -59,7 +59,7 @@ function $(id) {
       "Feels like " + deg(now.feels_like) + " · Low " + deg(today.min) + " · High " + deg(today.max);
     $("cacheInfo").textContent = data.cached ? "Loaded from cache" : "Fresh data";
   
-    
+  
     const items = [
       ["Wind", Math.round(now.wind_speed) + " km/h"],
       ["Humidity", Math.round(now.humidity) + "%"],
@@ -81,10 +81,9 @@ function $(id) {
     $("today").classList.remove("hidden");
   }
   
- 
   
   function showHourly(data) {
-    
+  
     let start = 0;
     if (data.current.time) {
       const nowHour = data.current.time.slice(0, 13);
@@ -111,12 +110,11 @@ function $(id) {
     $("hourlySection").classList.remove("hidden");
   }
   
-
   
   function showDaily(data) {
     const days = data.daily;
   
-    
+  
     let weekMin = days[0].min;
     let weekMax = days[0].max;
     for (const d of days) {
@@ -129,7 +127,7 @@ function $(id) {
     for (let i = 0; i < days.length; i++) {
       const d = days[i];
   
-      
+  
       const left = (d.min - weekMin) / range * 100;
       const width = Math.max((d.max - d.min) / range * 100, 4);
   
@@ -155,11 +153,10 @@ function $(id) {
     $("dailySection").classList.remove("hidden");
   }
   
-
+  
   function toggleDetails(index) {
     $("day" + index).classList.toggle("open");
   }
-  
   
   
   async function loadWeather(lat, lon, placeName) {
@@ -182,12 +179,9 @@ function $(id) {
     }
   }
   
-  // ===============================
-  // 6. Search (press Enter)
-  // ===============================
   
   $("searchForm").addEventListener("submit", async function (event) {
-    event.preventDefault();               
+    event.preventDefault();
     const text = $("searchInput").value.trim();
     if (text.length < 2) {
       showMessage("Type at least 2 letters", true);
@@ -199,7 +193,7 @@ function $(id) {
         showMessage("Place not found. Try another spelling.", true);
         return;
       }
-      const place = places[0];            
+      const place = places[0];
       const name = place.name + (place.country ? ", " + place.country : "");
       $("searchInput").value = name;
       loadWeather(place.lat, place.lon, name);
@@ -208,7 +202,7 @@ function $(id) {
     }
   });
   
-
+  
   function useMyLocation() {
     if (!navigator.geolocation) {
       showMessage("Your browser does not support location", true);
@@ -220,14 +214,14 @@ function $(id) {
       },
       function () {
         showMessage("Location was blocked. Search for a city instead.", true);
-        loadWeather(40.41, 49.87, "Baku, Azerbaijan");   
+        loadWeather(40.41, 49.87, "Baku, Azerbaijan");
       }
     );
   }
   
   $("locateBtn").addEventListener("click", useMyLocation);
   
-
+  
   function dateText(daysFromToday) {
     const d = new Date();
     d.setDate(d.getDate() + daysFromToday);
@@ -270,5 +264,6 @@ function $(id) {
       showMessage(error.message, true);
     }
   });
+  
   
   useMyLocation();

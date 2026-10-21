@@ -7,10 +7,9 @@ import requests
 
 load_dotenv()
 
-
 app = Flask(__name__, static_folder="templates", static_url_path="/assets")
 
-CACHE_TTL_SECONDS = 300  
+CACHE_TTL_SECONDS = 300
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///cache.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -51,7 +50,6 @@ def set_cached(key, data):
     db.session.commit()
 
 
-
 class WeatherServiceError(Exception):
     def __init__(self, message, status=502):
         super().__init__(message)
@@ -72,7 +70,6 @@ def http_get(url, params):
         raise WeatherServiceError("Hava xidmetinden xeta", 502)
     except requests.RequestException:
         raise WeatherServiceError("Sebeke xetasi", 502)
-
 
 
 WEATHER_CODES = {
@@ -152,7 +149,6 @@ def fetch_forecast(lat, lon):
     }
     data = http_get("https://api.open-meteo.com/v1/forecast", params)
 
-    
     c = data["current"]
     text, icon = describe(c["weather_code"])
     current = {
@@ -168,7 +164,6 @@ def fetch_forecast(lat, lon):
         "icon": icon,
     }
 
-    
     d = data["daily"]
     daily = []
     for i in range(len(d["time"])):
@@ -184,7 +179,6 @@ def fetch_forecast(lat, lon):
             "uv": d["uv_index_max"][i],
         })
 
-    
     h = data["hourly"]
     hourly = []
     for i in range(48):
