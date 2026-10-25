@@ -8,11 +8,15 @@ from datetime import date, datetime
 app = Flask(__name__, static_folder="templates", static_url_path="/assets")
 
 CACHE_FILE = "cache.json"
-CACHE_SECONDS = 300  
+CACHE_SECONDS = 300 
+
+
+class LimitReached(Exception):
+    def __init__(self, url):
+        self.url = url
 
 
 def read_cache():
-    
     if not os.path.exists(CACHE_FILE):
         return {}
     try:
@@ -28,7 +32,6 @@ def write_cache(cache):
 
 
 def get_data(key, url, params):
-    # 1. Look in the cache first
     cache = read_cache()
     item = cache.get(key)
     if item and time.time() - item["time"] < CACHE_SECONDS:
@@ -37,10 +40,12 @@ def get_data(key, url, params):
         return data
 
     response = requests.get(url, params=params, timeout=15)
+    if response.status_code == 429:
+        full_url = requests.Request("GET", url, params=params).prepare().url
+        raise LimitReached(full_url)
     response.raise_for_status()
     data = response.json()
 
-    
     cache[key] = {"time": time.time(), "data": data}
     write_cache(cache)
 
@@ -57,6 +62,12 @@ def get_coordinates():
     if lat < -90 or lat > 90 or lon < -180 or lon > 180:
         return None, None
     return lat, lon
+
+
+@app.errorhandler(LimitReached)
+def limit_error(error):
+    return jsonify({"error": "Weather service limit reached. Try again later.",
+                    "fallback_url": error.url}), 429
 
 
 @app.errorhandler(requests.RequestException)

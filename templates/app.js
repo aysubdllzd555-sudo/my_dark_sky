@@ -15,6 +15,15 @@ function hideMessage() {
 async function getJson(url) {
   var response = await fetch(url);
   var data = await response.json();
+
+  if (response.status === 429 && data.fallback_url) {
+    var direct = await fetch(data.fallback_url);
+    if (!direct.ok) {
+      throw new Error("Weather service limit reached. Try again later.");
+    }
+    return await direct.json();
+  }
+
   if (!response.ok) {
     throw new Error(data.error || "Something went wrong");
   }
@@ -28,7 +37,6 @@ function temp(c) {
 function speed(kmh) {
   return Math.round(kmh) + " km/h";
 }
-
 
 function weatherInfo(code) {
   if (code === 0) return ["Clear", "CLEAR_DAY", "☀️", "#f6c445"];
@@ -53,7 +61,6 @@ function drawIcon(canvasId, iconName) {
   skycons.play();
   return true;
 }
-
 
 var currentLat = null;
 var currentLon = null;
@@ -94,6 +101,7 @@ async function loadWeather(lat, lon, placeName) {
   }
 }
 
+
 $("search-form").addEventListener("submit", async function (event) {
   event.preventDefault();
   var text = $("search-input").value.trim();
@@ -116,7 +124,6 @@ $("search-form").addEventListener("submit", async function (event) {
   }
 });
 
-
 function useMyLocation() {
   if (!navigator.geolocation) {
     loadWeather(40.41, 49.87, "Baku, Azerbaijan");
@@ -133,7 +140,6 @@ function useMyLocation() {
   );
 }
 $("location-button").addEventListener("click", useMyLocation);
-
 
 function dateText(daysFromToday) {
   var d = new Date();
@@ -171,7 +177,7 @@ async function showTimeMachine(chosen) {
     var data = await getJson("/history?lat=" + currentLat + "&lon=" + currentLon + "&date=" + chosen);
     var day = data.daily;
     var info = weatherInfo(day.weather_code[0]);
-    var label = data.is_past ? "Past" : "Forecast";
+    var label = chosen < dateText(0) ? "Past" : "Forecast";
     $("time-result").innerHTML =
       "<div class='time-result-card'>" +
         "<span class='tag'>" + label + "</span>" +
