@@ -6,11 +6,13 @@ import time
 from datetime import date, datetime
 
 app = Flask(__name__, static_folder="templates", static_url_path="/assets")
+
 CACHE_FILE = "cache.json"
-CACHE_SECONDS = 300
+CACHE_SECONDS = 300  
 
 
 def read_cache():
+    
     if not os.path.exists(CACHE_FILE):
         return {}
     try:
@@ -26,6 +28,7 @@ def write_cache(cache):
 
 
 def get_data(key, url, params):
+    # 1. Look in the cache first
     cache = read_cache()
     item = cache.get(key)
     if item and time.time() - item["time"] < CACHE_SECONDS:
@@ -33,11 +36,11 @@ def get_data(key, url, params):
         data["cached"] = True
         return data
 
-    
     response = requests.get(url, params=params, timeout=15)
     response.raise_for_status()
     data = response.json()
 
+    
     cache[key] = {"time": time.time(), "data": data}
     write_cache(cache)
 
@@ -58,7 +61,11 @@ def get_coordinates():
 
 @app.errorhandler(requests.RequestException)
 def api_error(error):
-    return jsonify({"error": "Weather service is not available. Try again later."}), 502
+    detail = str(error)
+    if error.response is not None:
+        detail = str(error.response.status_code) + " " + error.response.text[:200]
+    print("Weather API error:", detail)
+    return jsonify({"error": "Weather service is not available. Try again later. (" + detail[:80] + ")"}), 502
 
 
 @app.route("/")
@@ -115,7 +122,6 @@ def history():
     if difference > 14:
         return jsonify({"error": "You can look only 14 days ahead"}), 400
 
-    
     if difference < 0:
         url = "https://archive-api.open-meteo.com/v1/archive"
     else:
