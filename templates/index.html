@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Dark Sky</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <nav class="topbar">
+    <span class="logo">&#128167; My Dark Sky</span>
+  </nav>
+
+  <div class="searchbar">
+    <button id="location-button" title="Use my location" class="round-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M3 11l18-8-8 18-2-8z"/></svg>
+    </button>
+    <form id="search-form" class="search-form">
+      <input id="search-input" type="text" placeholder="Search for a location">
+      <button type="submit" class="search-icon" title="Search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2.5"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6"/></svg>
+      </button>
+    </form>
+  </div>
+
+  <main class="page">
+    <p id="message" class="hidden message"></p>
+
+    <section id="today" class="hidden">
+      <div class="today-top">
+        <canvas id="today-icon" width="64" height="64"></canvas>
+        <h1 id="today-title"></h1>
+      </div>
+      <p id="today-range" class="range-line"></p>
+      <p id="today-extra" class="range-line"></p>
+    </section>
+
+    <section id="time-box" class="hidden time-box">
+      <p>Explore the weather in the past or future:</p>
+      <button id="time-button" class="time-button">TIME MACHINE</button>
+      <div id="calendar-box" class="hidden">
+        <input id="date-input" type="text">
+      </div>
+      <div id="time-result"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    Weather data by <a href="https://open-meteo.com" target="_blank">Open-Meteo</a>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+  <script src="{{ url_for('static', filename='skycons.js') }}"></script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
